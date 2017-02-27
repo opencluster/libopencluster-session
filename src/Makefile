@@ -14,7 +14,7 @@ ARGS=
 # Project derived variables.  Do not manually change these. These should be dependent on the variables already set.
 LIBNAME=lib$(PRODUCT)
 SRCFILE=$(LIBNAME).c
-INCFILE=$(PRODUCT).h
+INCFILES=$(PRODUCT).h $(PRODUCT)-prot.h
 MAINFILE=$(LIBNAME).so
 LIBFILE=$(MAINFILE).$(LIBVER)
 SONAME=$(MAINFILE).$(SOVER)
@@ -31,7 +31,7 @@ src: $(WORKDIR)/$(LIBNAME)-src-$(LIBVER).tar.gz
 
 # Need to be able to make 'man-pages' as well.  Not sure where to get the source for those... 
 
-$(WORKDIR)/$(LIBNAME).o: $(SRCFILE) $(INCFILE)
+$(WORKDIR)/$(LIBNAME).o: $(SRCFILE) $(INCFILES)
 	@echo "Making: $@"
 	@-[ -d $(WORKDIR) ] || mkdir $(WORKDIR)
 	gcc -c -fPIC $(SRCFILE) -o $@ $(ARGS)
@@ -50,13 +50,13 @@ $(WORKDIR)/$(LIBFILE): $(WORKDIR)/$(LIBNAME).o
 	gcc -shared -Wl,-soname,$(SONAME) -o $@ $^
 
 
-$(WORKDIR)/$(LIBNAME)-src-$(LIBVER).tar.gz: $(SRCFILE) $(INCFILE) Makefile
+$(WORKDIR)/$(LIBNAME)-src-$(LIBVER).tar.gz: $(SRCFILE) $(INCFILES) Makefile
 	@echo "Making: $@"
 	@-[ ! -d $(WORKDIR) ] && mkdir $(WORKDIR)
 	@-[ -e $@ ] && rm $@
 	tar zcf $@ $^
 
-$(WORKDIR)/$(LIBNAME)-$(LIBVER).tar.gz: $(WORKDIR)/$(LIBFILE) $(INCFILE) $(LIBNAME).o
+$(WORKDIR)/$(LIBNAME)-$(LIBVER).tar.gz: $(WORKDIR)/$(LIBFILE) $(INCFILES) $(LIBNAME).o
 	@echo "Making: $@"
 	@-[ ! -d $(WORKDIR) ] && mkdir $(WORKDIR)
 	@-[ -e $@ ] && rm $@
@@ -71,8 +71,8 @@ install: $(WORKDIR)/$(LIBFILE)
 
 
 # when man-pages are available, need to add to the install_dev target.
-install_dev: $(INCFILE)
-	cp $(INCFILE) $(INCDIR)/
+install_dev: $(INCFILES)
+	cp *.h $(INCDIR)/
 
 
 man-pages: manpages/libopencluster-session.3 
