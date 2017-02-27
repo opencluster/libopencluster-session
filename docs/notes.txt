@@ -1,0 +1,65 @@
+The authentication process.
+
+The encryption/authentication layer of the entire protocol stack will be used for every single operation, so we dont want to make it complicated, or processor, or bandwidth intensive.  Therefore, we will use a flat protocol.   The protocols that it will be wrapping will already likely be a structured protocol, so there is an advantage in making this one flat.  It makes it easier to buffer the data coming in.  This does mean that certain operations will need to be sent in a loose ordering.
+
+
+There are two main account types.  
+ 1. Interactive
+ 2. Non-interactive.
+
+When a connection is established, the client will immediately be ready to process commands.  No additional 'Hello' or handshake process 
+is required.  Therefore the protocol itself should be quite stable even if random data is sent when the connection is established.  
+Disruptive operations should only be performed after the authentication process has been completed.
+
+The Interactive accounts have a certificate stored on the server for that account.  The certificate is passphrase protected.  The server 
+does not know the password.  Only the client knows the password.
+
+When an interactive process logs in, it first sends the user details.
+
+	Client Sends:
+		USERNAME <username string>
+		MAX-PACKET <optional integer>
+
+	Server Sends:
+		CERTIFICATE <certificate string>
+		SESSION-KEY <encrypted symetric key>
+		MAX-PACKET <optional integer>
+
+The username provided is used to lookup the details.   Note that for some instances, the username could also include a zone name...  As long as the username details are unique, then it doesn't matter.  This initial step is to establish an encrypted and authenticated channel.
+		
+When the client recieves the CERTIFICATE and a SESSION-KEY, it must unlock the certificate locally, and decrypt the SESSION-KEY.
+All communications now will require data to be encrypted and decrypted using that session key.
+
+The MAX-PACKET command is optional and might be set on either the server or client that indicates to the client the max-packet that should be encrypted and set at a time.  When sent from the client, the server will mimic unless the server's setting is lower.  This is particularly useful for servers or clients that have limited buffer size.  In this case, incoming data is broken up into chunks and sent as seperate packets.  If the encoded data is RISP, then it can be buffered on either side in whatever method works best, and processed.
+
+
+
+The other type of authentication is Non-Interactive.  In this case, the server does not send the certificate to the client.  In fact, the server itself does not have the private key part of the certificate.
+
+	Client sends:
+		CERTIFICATE-ID <The thumbprint of the cert to be used for this session>
+
+	Server responds:
+		SESSION-KEY <encrypted symetric key>
+
+When the server receives the ID of the thumbprint being used, it looks up the certificate and is able to determine what account is 
+associated with it.  It will generate a random symetric key and will encrypt it using the certificate mentioned.
+The client will get the encrypted session key, unencrypt it, and use it to encrypt session data going forward.
+If the client is unable to decrypt the key, then all communications going forward will fail.
+
+	Client, or Server Sends:
+		DATA-LENGTH <integer>
+		DATA <encrypted data, possibly longer than original>
+		VERIFICATION-SHA256 <>
+
+
+When sending data, the symetric key for the session is used.  It will also do a SHA sum of the data being sent (before encryption), encrypt that, and send 
+it as well.  This will ensure that the server and client can verify that the data has been encoded and decoded accurately. The decoded 
+SHA should match the actual SHA for the data.
+
+Some of the technicalities of handling data that doesn't fit in 64-bit boundaries can cause issues.  Also, we may want to consider how to do this for very large peices of data.  Do we want to do a SHA sum of a 1gb chunk of data, or even only a few MB?
+
+		Note: The default commands will be for very specific encryption options.  If any different encryption options are added in the future, new and different commands should be used.   
+		
+
+
